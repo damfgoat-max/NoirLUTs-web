@@ -1,0 +1,19 @@
+rules_version = '2';
+// NOIR LUTs — Storage rules: preview images/videos are public-read,
+// only the admin can upload/replace them.
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isAdmin() {
+      return request.auth != null &&
+        firestore.exists(/databases/(default)/documents/admins/$(request.auth.uid));
+    }
+    match /products/{fileName} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /{allPaths=**} {
+      allow read: if false;
+      allow write: if isAdmin();
+    }
+  }
+}

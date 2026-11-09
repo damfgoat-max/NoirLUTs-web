@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>NOIR LUTs — Cinematic Color Grading Presets</title>
+<meta name="description" content="Premium cinematic LUT packs. Browse, order, and chat directly with us — payment & delivery arranged personally.">
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230A0A0A'/><text x='50' y='68' font-size='58' text-anchor='middle' fill='%23FF8A00' font-family='Arial' font-weight='900'>N</text></svg>">
+</head>
+<body>
+  <div id="demoBadge" class="demo-badge hidden">DEMO MODE — connect Firebase to go live</div>
+
+  <header class="site-header">
+    <a class="brand" href="#/">
+      <span id="brandName">NOIR</span><span class="brand-accent"> LUTs</span>
+    </a>
+    <nav class="top-nav">
+      <a href="#/" data-nav="shop">Shop</a>
+      <a href="#/orders" data-nav="orders">My Orders</a>
+      <a href="#/admin" data-nav="admin" class="hidden" id="adminNavLink">Admin</a>
+    </nav>
+  </header>
+
+  <main id="view" class="view"></main>
+
+  <footer class="site-footer">
+    <button id="copyrightBtn" class="copyright-btn" aria-label="Copyright">© 2025 <span id="brandNameFooter">NOIR</span></button>
+    <p class="footer-note">Payment &amp; delivery arranged personally in chat after you order.</p>
+  </footer>
+
+  <nav class="bottom-nav">
+    <a href="#/" data-nav="shop"><span class="bn-icon">🎬</span>Shop</a>
+    <a href="#/orders" data-nav="orders"><span class="bn-icon">📦</span>Orders</a>
+  </nav>
+
+  <div id="modalRoot"></div>
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="/config.js"></script>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
