@@ -27,53 +27,42 @@ function toast(msg) {
   t.textContent = msg; t.classList.remove("hidden");
   clearTimeout(t._h); t._h = setTimeout(() => t.classList.add("hidden"), 2600);
 }
+function paletteStyle(p) {
+  const pal = p.palette || {};
+  const sh = pal.shadow || "#141414", mid = pal.mid || "#555555", sk = pal.skin || "#b98a63", hi = pal.highlight || "#eeeeee";
+  return `background:linear-gradient(120deg, ${sh} 0%, ${mid} 42%, ${sk} 72%, ${hi} 115%)`;
+}
+function paletteDotsHTML(p) {
+  const pal = p.palette || {}; if (!pal.shadow) return "";
+  const dot = (hex, lbl) => `<span class="pal-dot"><i style="background:${esc(hex)}"></i>${lbl}<br><b>${esc(hex)}</b></span>`;
+  return `<div class="pal-dots"><span class="pal-dots-title">This LUT's colour response — sampled from the real .cube data:</span><div class="pal-dots-row">${dot(pal.shadow, "Shadows")}${dot(pal.mid, "Mid grey")}${dot(pal.skin, "Skin tone")}${dot(pal.highlight, "Highlights")}</div></div>`;
+}
 function mediaHTML(p, cls) {
   if (p.videoUrl) return `<video class="${cls}" src="${esc(p.videoUrl)}" poster="${esc(p.imageUrl || "")}" autoplay muted loop playsinline></video>`;
   if (p.imageUrl) return `<img class="${cls}" src="${esc(p.imageUrl)}" alt="${esc(p.name)}" loading="lazy">`;
-  return `<div class="${cls}" style="background:linear-gradient(135deg,#2a1a05,#0d0d0d)"></div>`;
+  return `<div class="${cls} palette-preview" style="${paletteStyle(p)}"><span class="palette-name">${esc(p.name)}</span><span class="palette-grad"></span></div>`;
 }
 
 // ============================================================
-//  PLACEHOLDER PRODUCTS (seed data — live mode: written to
-//  Firestore by the admin Seed button; demo mode: the demo DB)
+//  REAL LUT CATALOG (catalog.js — generated from the actual
+//  downloaded .cube files + measured best-settings data).
+//  Demo mode: this is the demo DB seed.
+//  Live mode: written to Firestore by the admin Seed button
+//  (deterministic doc ids = product id, so re-seeding updates
+//  in place instead of duplicating).
 // ============================================================
-const PLACEHOLDER_PRODUCTS = [
-  {
-    name: "CINEMATIC WARMTH PACK", tagline: "Warm golden-hour grades for sunny, aesthetic footage",
-    description: "Our signature warm pack. Golden skin tones, soft highlights and rich amber shadows — built for beach days, golden hour and clean outdoor footage.\n\nWorks in Blackmagic Camera, LumaRAW, Premiere, DaVinci Resolve and any app that takes .cube LUTs.",
-    includes: ["12 warm cinematic .cube LUTs (33-point)", "Rec.709 versions — no Log needed", "Best-settings cheat sheet (ISO / shutter / WB per LUT)", "Free updates for this pack"],
-    price: 29, imageUrl: "https://picsum.photos/seed/noirwarm/1200/800",
-    videoUrl: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
-    isActive: true, sortOrder: 1
-  },
-  {
-    name: "TEAL & ORANGE BLOCKBUSTER PACK", tagline: "The Hollywood look — teal shadows, glowing skin",
-    description: "The classic blockbuster grade. Deep teal shadows with warm, protected skin tones for instant subject separation.\n\nIncludes strong and subtle strengths so it works on everything from sports to portraits.",
-    includes: ["10 teal & orange .cube LUTs", "Subtle + strong versions of each look", "Rec.709 and Apple Log variants", "Install guide for phone + desktop"],
-    price: 39, imageUrl: "https://picsum.photos/seed/noirteal/1200/800",
-    videoUrl: "",
-    isActive: true, sortOrder: 2
-  },
-  {
-    name: "MOODY FILM PACK", tagline: "Faded blacks, soft contrast, real film character",
-    description: "Muted, moody film emulation — lifted blacks, gentle rolloff and desaturated greens for a quiet cinematic feel.\n\nPerfect for overcast days, city footage and night scenes.",
-    includes: ["9 moody film .cube LUTs", "Faded + night variants", "Rec.709 versions — no Log needed", "Best-settings cheat sheet"],
-    price: 24, imageUrl: "https://picsum.photos/seed/noirmood/1200/800",
-    videoUrl: "",
-    isActive: true, sortOrder: 3
-  }
-];
+const CATALOG = (window.NOIR_CATALOG || []).map(p => ({ ...p }));
 
 // ============================================================
 //  DEMO DATA LAYER (localStorage)
 // ============================================================
 const DemoDB = {
-  KEY: "noirluts_demo_db_v1",
+  KEY: "noirluts_demo_db_v2",
   listeners: new Set(),
   load() {
     try { const raw = localStorage.getItem(this.KEY); if (raw) return JSON.parse(raw); } catch (e) {}
     const db = {
-      products: PLACEHOLDER_PRODUCTS.map((p, i) => ({ ...p, id: "demo-prod-" + (i + 1) })),
+      products: CATALOG.map(p => ({ ...p })),
       orders: [], chats: [], messages: {}, counter: 1023
     };
     localStorage.setItem(this.KEY, JSON.stringify(db));
@@ -220,7 +209,7 @@ const Store = {
       const num = "ORD-" + db.counter;
       const oid = "order-" + Date.now() + "-" + Math.random().toString(36).slice(2, 6);
       const now = Date.now();
-      db.orders.push({ id: oid, orderNumber: num, customerId: this.uid, productId: product.id, productName: product.name, price: product.price, imageUrl: product.imageUrl || "", status: "Pending", createdAt: now });
+      db.orders.push({ id: oid, orderNumber: num, customerId: this.uid, productId: product.id, productName: product.name, price: product.price, imageUrl: product.imageUrl || "", palette: product.palette || null, type: product.type || "", status: "Pending", createdAt: now });
       db.chats.push({ id: oid, orderId: oid, customerId: this.uid, lastMessage: firstText(num), lastMessageAt: now, adminUnread: true, customerUnread: false });
       (db.messages[oid] = db.messages[oid] || []).push({ id: "m" + now, senderId: this.uid, senderRole: "customer", text: firstText(num), createdAt: now });
       DemoDB.save(db);
@@ -235,7 +224,7 @@ const Store = {
       return "ORD-" + next;
     });
     const orderRef = fsM.doc(fsM.collection(db, "orders"));
-    const order = { orderNumber: num, customerId: this.uid, productId: product.id, productName: product.name, price: product.price, imageUrl: product.imageUrl || "", status: "Pending", createdAt: fsM.serverTimestamp() };
+    const order = { orderNumber: num, customerId: this.uid, productId: product.id, productName: product.name, price: product.price, imageUrl: product.imageUrl || "", palette: product.palette || null, type: product.type || "", status: "Pending", createdAt: fsM.serverTimestamp() };
     await fsM.setDoc(orderRef, order);
     await fsM.setDoc(fsM.doc(db, "chats", orderRef.id), { orderId: orderRef.id, customerId: this.uid, lastMessage: firstText(num), lastMessageAt: fsM.serverTimestamp(), adminUnread: true, customerUnread: false });
     await fsM.addDoc(fsM.collection(db, "chats", orderRef.id, "messages"), { senderId: this.uid, senderRole: "customer", text: firstText(num), createdAt: fsM.serverTimestamp() });
@@ -308,11 +297,15 @@ const Store = {
   },
 
   async seedProducts() {
-    if (!LIVE) { toast("Demo products are already the placeholders 👍"); return { ok: true, note: "demo" }; }
+    if (!LIVE) { toast("Demo mode already uses the real LUT catalog 👍"); return { ok: true, note: "demo" }; }
     const { fsM, db } = this._fb;
-    for (const p of PLACEHOLDER_PRODUCTS) await fsM.addDoc(fsM.collection(db, "products"), p);
-    return { ok: true };
+    for (const p of CATALOG) {
+      const { id, ...data } = p;
+      await fsM.setDoc(fsM.doc(db, "products", id), data);
+    }
+    return { ok: true, count: CATALOG.length };
   }
+
 };
 function normTs(d) { const o = { ...d }; for (const k of ["createdAt", "lastMessageAt"]) if (o[k] && o[k].toMillis) o[k] = o[k].toMillis(); return o; }
 if (!LIVE && sessionStorage.getItem("noirluts_demo_admin") === "1") Store.isAdmin = true;
@@ -325,6 +318,40 @@ let unsubs = [];
 function cleanup() { unsubs.forEach(u => { try { u(); } catch (e) {} }); unsubs = []; $modal.innerHTML = ""; }
 function setNav(name) { document.querySelectorAll("[data-nav]").forEach(a => a.classList.toggle("active", a.dataset.nav === name)); }
 
+let shopState = { q: "", filter: "all", products: [] };
+const SHOP_FILTERS = [
+  ["all", "All"], ["rec709", "Rec.709"], ["log", "Log & Conversion"],
+  ["packs", "Packs"], ["warm", "Warm"], ["cool", "Cool"]
+];
+function productMatches(p) {
+  const f = shopState.filter;
+  if (f === "rec709" && p.type !== "Rec.709 creative") return false;
+  if (f === "log" && p.type !== "LOG / CONVERSION") return false;
+  if (f === "packs" && p.type !== "PACK") return false;
+  if (f === "warm" && p.tone !== "warm") return false;
+  if (f === "cool" && p.tone !== "cool") return false;
+  if (shopState.q) {
+    const hay = (p.name + " " + (p.tagline || "") + " " + (p.type || "")).toLowerCase();
+    if (!hay.includes(shopState.q.toLowerCase())) return false;
+  }
+  return true;
+}
+function renderFeed() {
+  const feed = document.getElementById("productFeed"); if (!feed) return;
+  const products = shopState.products.filter(productMatches);
+  const count = document.getElementById("feedCount");
+  if (count) count.textContent = products.length + " of " + shopState.products.length + " LUTs";
+  if (!products.length) { feed.innerHTML = `<div class="empty"><span class="big">🔍</span>No LUTs match that search.</div>`; return; }
+  feed.innerHTML = products.map(p => `
+    <a class="card" href="#/product/${p.id}">
+      <div class="card-media">${mediaHTML(p)}<span class="card-price-chip">${money(p.price)}</span>${p.type === "PACK" ? `<span class="card-pack-chip">PACK</span>` : ""}</div>
+      <div class="card-body">
+        <h2 class="card-name">${esc(p.name)}</h2>
+        <p class="card-tag">${esc(p.tagline || "")}</p>
+        <span class="card-cta">VIEW ${p.type === "PACK" ? "PACK" : "LUT"} →</span>
+      </div>
+    </a>`).join("");
+}
 function viewShop() {
   setNav("shop");
   $view.innerHTML = `
@@ -332,21 +359,20 @@ function viewShop() {
       <h1>Cinematic color,<br><span class="accent">one tap away.</span></h1>
       <p>${esc(CFG.brandTagline || "")}. Order in seconds — payment &amp; delivery are arranged personally with you in chat. No checkout, no hassle.</p>
     </section>
-    <div class="section-title">LUT Packs</div>
-    <div id="productFeed"><div class="loading">Loading LUT packs…</div></div>`;
-  unsubs.push(Store.subscribeProducts((products) => {
-    const feed = document.getElementById("productFeed"); if (!feed) return;
-    if (!products.length) { feed.innerHTML = `<div class="empty"><span class="big">🎞️</span>No LUT packs live yet — check back soon.</div>`; return; }
-    feed.innerHTML = products.map(p => `
-      <a class="card" href="#/product/${p.id}">
-        <div class="card-media">${mediaHTML(p)}<span class="card-price-chip">${money(p.price)}</span></div>
-        <div class="card-body">
-          <h2 class="card-name">${esc(p.name)}</h2>
-          <p class="card-tag">${esc(p.tagline || "")}</p>
-          <span class="card-cta">VIEW PACK →</span>
-        </div>
-      </a>`).join("");
+    <div class="section-title">LUT Packs &amp; LUTs</div>
+    <div class="shop-tools">
+      <input id="shopSearch" class="shop-search" type="search" placeholder="Search 187 LUTs &amp; packs…" value="${esc(shopState.q)}" autocomplete="off">
+      <div class="chip-row">${SHOP_FILTERS.map(([k, lbl]) => `<button class="chip ${shopState.filter === k ? "chip-on" : ""}" data-filter="${k}">${lbl}</button>`).join("")}</div>
+      <p class="feed-count" id="feedCount"></p>
+    </div>
+    <div id="productFeed"><div class="loading">Loading LUTs…</div></div>`;
+  document.getElementById("shopSearch").addEventListener("input", (e) => { shopState.q = e.target.value; renderFeed(); });
+  document.querySelectorAll("[data-filter]").forEach(b => b.addEventListener("click", () => {
+    shopState.filter = b.dataset.filter;
+    document.querySelectorAll("[data-filter]").forEach(x => x.classList.toggle("chip-on", x === b));
+    renderFeed();
   }));
+  unsubs.push(Store.subscribeProducts((products) => { shopState.products = products; renderFeed(); }));
 }
 
 async function viewProduct(id) {
@@ -355,6 +381,7 @@ async function viewProduct(id) {
   const p = await Store.getProduct(id);
   if (!p) { $view.innerHTML = `<a class="back-link" href="#/">← Back to shop</a><div class="empty"><span class="big">🤷</span>That pack isn't available.</div>`; return; }
   const hasVideo = !!p.videoUrl;
+  const st = p.settings || null;
   $view.innerHTML = `
     <a class="back-link" href="#/">← Back to shop</a>
     <div class="detail-media">
@@ -364,7 +391,12 @@ async function viewProduct(id) {
     </div>
     <h1 class="detail-name">${esc(p.name)}</h1>
     <p class="detail-price">${money(p.price)}</p>
+    ${p.logWarning ? `<div class="log-warning">⚠ <b>For Log footage from supported cameras only</b> — this is a Log / conversion LUT, not for normal iPhone photos.</div>` : ""}
+    ${paletteDotsHTML(p)}
     <p class="detail-desc">${esc(p.description || p.tagline || "")}</p>
+    ${st ? `<div class="settings-card"><h3>Best settings for this LUT</h3><div class="settings-grid">
+      <span>ISO<b>${esc(st.iso)}</b></span><span>Shutter<b>${esc(st.shutter)}</b></span><span>White Balance<b>${esc(st.wb)}</b></span><span>EV<b>${esc(st.ev)}</b></span><span>Intensity<b>${esc(st.intensity)}</b></span><span>Best scene<b>${esc(st.scene)}</b></span>
+    </div></div>` : ""}
     ${Array.isArray(p.includes) && p.includes.length ? `<div class="includes"><h3>What's included</h3><ul>${p.includes.map(i => `<li>${esc(i)}</li>`).join("")}</ul></div>` : ""}
     <button class="btn btn-accent" id="orderBtn">Place Order — ${money(p.price)}</button>
     <p style="color:var(--muted);font-size:14px;text-align:center;margin-top:12px">No payment now. Placing an order opens a private chat with us to arrange payment &amp; delivery.</p>`;
@@ -405,7 +437,7 @@ function confirmOrder(p) {
 function orderRowHTML(o, opts = {}) {
   return `
     <button class="order-row" data-order="${o.id}">
-      ${o.imageUrl ? `<img class="order-thumb" src="${esc(o.imageUrl)}" alt="">` : `<div class="order-thumb"></div>`}
+      ${o.imageUrl ? `<img class="order-thumb" src="${esc(o.imageUrl)}" alt="">` : `<div class="order-thumb" style="${o.palette ? paletteStyle(o) : ""}"></div>`}
       <span class="order-main">
         <p class="order-name">${esc(o.productName)}</p>
         <p class="order-meta">${esc(o.orderNumber)} · ${money(o.price)} · ${fmtDate(o.createdAt)}${opts.customer ? " · Customer " + esc(shortId(o.customerId)) : ""}</p>
@@ -445,7 +477,7 @@ function chatView(orderId, asAdmin) {
     if (!asAdmin && order.customerId !== Store.uid && Store.mode === "demo" && order.customerId !== Store.uid) { /* demo: allow view */ }
     root.innerHTML = `
       <div class="summary-card">
-        ${order.imageUrl ? `<img src="${esc(order.imageUrl)}" alt="">` : ""}
+        ${order.imageUrl ? `<img src="${esc(order.imageUrl)}" alt="">` : (order.palette ? `<span class="summary-thumb" style="${paletteStyle(order)}"></span>` : "")}
         <div style="flex:1;min-width:0">
           <div style="font-weight:900;font-size:17px">${esc(order.productName)}</div>
           <div style="color:var(--muted);font-size:13.5px">${esc(order.orderNumber)} · ${money(order.price)} · ${fmtDate(order.createdAt)}</div>
@@ -525,12 +557,12 @@ function viewAdmin() {
       <div class="stat"><div class="num" id="stDelivered" style="color:#4ade80">–</div><div class="lbl">Delivered</div></div>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px">
-      <button class="btn btn-ghost btn-small" id="seedBtn">Seed placeholder products</button>
+      <button class="btn btn-ghost btn-small" id="seedBtn">Seed real LUT catalog (187 products)</button>
       <button class="btn btn-ghost btn-small" id="logoutBtn">Log out</button>
     </div>
     <div class="section-title">Order Chats</div>
     <div id="adminChats"><div class="loading">Loading chats…</div></div>`;
-  document.getElementById("seedBtn").onclick = async () => { const r = await Store.seedProducts(); toast(r.ok ? "Placeholder products seeded to Firestore ✓" : "Seed failed"); };
+  document.getElementById("seedBtn").onclick = async () => { const r = await Store.seedProducts(); toast(r.ok ? `Catalog seeded to Firestore ✓ (${r.count || CATALOG.length} products)` : "Seed failed"); };
   document.getElementById("logoutBtn").onclick = async () => { await Store.adminLogout(); location.hash = "#/"; };
   unsubs.push(Store.subscribeAllOrders((orders) => {
     const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };

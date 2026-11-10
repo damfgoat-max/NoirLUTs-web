@@ -53,11 +53,22 @@ Easiest (console) way:
 ## 8. Seed + manage products
 1. Open the site, scroll to the footer, tap **© 2025 NOIR** (hidden admin entry).
 2. Log in with your admin email/password.
-3. On the dashboard, tap **Seed placeholder products** — this writes the 3
-   placeholder packs to Firestore.
+3. On the dashboard, tap **Seed real LUT catalog (187 products)** — this
+   writes the full real catalog to Firestore: the 3 packs plus all 184
+   individual LUTs from the LimeWire downloads (with their measured
+   best-settings, colour palettes sampled from the actual .cube data,
+   and types). It uses each product's id as the Firestore document id,
+   so re-running it updates in place — it never duplicates products.
+   Product prices are starter placeholders (individual LUTs $12,
+   packs $79 / $49 / $39) — edit any of them in Firestore afterwards.
+   Note: the .cube files themselves are NOT hosted on the website —
+   delivery stays manual: you send the file in the customer's order
+   chat after arranging payment, exactly as the shop copy states.
 4. From then on, add/edit everything in **Firestore → `products`**:
    `name`, `tagline`, `description`, `includes` (array of strings), `price`,
    `imageUrl`, `videoUrl`, `isActive` (true/false), `sortOrder` (1 = top).
+   Catalog products also carry `type`, `tone`, `palette`, `settings`
+   and `logWarning` — leave those as seeded unless you know why.
    Changes appear on the shop instantly — no redeploy.
 
 ## How the shop works (live)
