@@ -11,11 +11,11 @@ window.NOIR_CONFIG = {
   // placeholder data so you can tap through every flow. Fill this in,
   // redeploy, and the shop goes live on Firestore/Auth in real time.
   firebase: {
-    apiKey: "",
-    authDomain: "",
-    projectId: "",
-    storageBucket: "",
-    messagingSenderId: "",
-    appId: ""
+    apiKey: "AIzaSyBfUxKIDJXSIHq1opGnvvm3vw4yGnyD-vQ",
+    authDomain: "noir-luts.firebaseapp.com",
+    projectId: "noir-luts",
+    storageBucket: "noir-luts.firebasestorage.app",
+    messagingSenderId: "804024171561",
+    appId: "1:804024171561:web:32c121f90cfe4ea6a57038"
   }
 };

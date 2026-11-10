@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>NOIR LUTs — One-time catalog seed (delete after use)</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230A0A0A'/><text x='50' y='68' font-size='58' text-anchor='middle' fill='%23FF8A00' font-family='Arial' font-weight='900'>N</text></svg>">
+<style>
+  :root { --accent:#FF8A00; --bg:#0A0A0A; --card:#141414; --line:#262626; --muted:#9a9a9a; --ok:#34d399; --err:#f87171; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:#fff; font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; padding:24px 16px 48px; }
+  .wrap { max-width:640px; margin:0 auto; }
+  .brand { font-weight:900; font-size:22px; letter-spacing:.5px; }
+  .brand span { color:var(--accent); }
+  .warn { border:1px solid var(--accent); background:rgba(255,138,0,.08); border-radius:14px; padding:14px 16px; margin:18px 0; font-size:15px; line-height:1.5; }
+  .warn b { color:var(--accent); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px; }
+  .status { color:var(--muted); font-size:14px; line-height:1.6; margin:0 0 14px; }
+  .status b { color:#fff; }
+  button#seedBtn { display:block; width:100%; background:var(--accent); color:#111; border:0; border-radius:14px; padding:16px; font-size:18px; font-weight:900; cursor:pointer; }
+  button#seedBtn:disabled { opacity:.45; cursor:not-allowed; }
+  pre#log { white-space:pre-wrap; word-break:break-word; background:#0d0d0d; border:1px solid var(--line); border-radius:12px; padding:12px; font-size:13px; line-height:1.55; max-height:320px; overflow:auto; margin:14px 0 0; }
+  .ok { color:var(--ok); font-weight:800; }
+  .err { color:var(--err); font-weight:800; }
+  .small { color:var(--muted); font-size:13px; line-height:1.6; margin-top:14px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand">NOIR<span> LUTs</span> — catalog seed</div>
+
+    <div class="warn">
+      ⚠️ <b>One-time setup — delete after use.</b><br>
+      This page writes the product catalog into Firestore once, during the
+      temporary seeding window (products rule temporarily relaxed in the
+      Firebase console). After seeding succeeds and the strict rules are
+      restored, delete <b>seed.html</b> from the site.
+    </div>
+
+    <div class="card">
+      <p class="status" id="status">Loading catalog &amp; connecting to Firebase…</p>
+      <button id="seedBtn" disabled>Seed 187 products</button>
+      <pre id="log" class="hidden" style="display:none"></pre>
+      <p class="small">
+        Signs in anonymously, then writes every product from the site catalog
+        into the Firestore <b>products</b> collection using each product's own
+        id (same deterministic ids as the in-app admin seed — re-running
+        updates in place, never duplicates). Also writes
+        <b>meta/bootstrap</b> { seeded: true }.
+        If a write fails with <i>permission-denied</i>, the temporary rules
+        window is not open yet — wait for it, then try again.
+      </p>
+    </div>
+  </div>
+
+  <script src="/config.js"></script>
+  <script src="/catalog.js"></script>
+  <script src="/catalog-part2.js"></script>
+  <script src="/catalog-part3.js"></script>
+  <script type="module">
+    const $status = document.getElementById("status");
+    const $btn = document.getElementById("seedBtn");
+    const $log = document.getElementById("log");
+    const CATALOG = window.NOIR_CATALOG || [];
+    const CFG = (window.NOIR_CONFIG || {}).firebase || {};
+
+    function log(line, cls) {
+      $log.style.display = "block";
+      const span = document.createElement("span");
+      if (cls) span.className = cls;
+      span.textContent = line + "\n";
+      $log.appendChild(span);
+      $log.scrollTop = $log.scrollHeight;
+    }
+
+    let db = null, fsM = null;
+    $btn.textContent = `Seed ${CATALOG.length} products`;
+
+    async function init() {
+      if (!CFG.apiKey) { $status.innerHTML = "<span class='err'>Firebase config is empty in config.js — cannot seed.</span>"; return; }
+      if (!CATALOG.length) { $status.innerHTML = "<span class='err'>Catalog failed to load (window.NOIR_CATALOG is empty).</span>"; return; }
+      try {
+        const v = "10.12.5";
+        const [appM, authM, firestoreM] = await Promise.all([
+          import(`https://www.gstatic.com/firebasejs/${v}/firebase-app.js`),
+          import(`https://www.gstatic.com/firebasejs/${v}/firebase-auth.js`),
+          import(`https://www.gstatic.com/firebasejs/${v}/firebase-firestore.js`)
+        ]);
+        fsM = firestoreM;
+        const app = appM.initializeApp(CFG);
+        const auth = authM.getAuth(app);
+        db = fsM.getFirestore(app);
+        const cred = await authM.signInAnonymously(auth);
+        $status.innerHTML =
+          `Connected to Firebase project <b>${CFG.projectId}</b> (anonymous uid <b>${cred.user.uid.slice(0, 8)}…</b>).<br>` +
+          `Catalog loaded: <b>${CATALOG.length} products</b>. Ready to seed.`;
+        $btn.disabled = false;
+      } catch (e) {
+        $status.innerHTML = `<span class='err'>Firebase init failed:</span> ${e.code || ""} ${e.message || e}`;
+      }
+    }
+
+    $btn.addEventListener("click", async () => {
+      if (!db || !fsM) return;
+      $btn.disabled = true;
+      $btn.textContent = "Seeding…";
+      const BATCH_SIZE = 400; // Firestore batch limit is 500 writes
+      let written = 0;
+      const errors = [];
+      try {
+        for (let i = 0; i < CATALOG.length; i += BATCH_SIZE) {
+          const chunk = CATALOG.slice(i, i + BATCH_SIZE);
+          const batch = fsM.writeBatch(db);
+          for (const p of chunk) {
+            const { id, ...data } = p;
+            batch.set(fsM.doc(db, "products", id), data);
+          }
+          await batch.commit();
+          written += chunk.length;
+          log(`Batch committed: ${written} / ${CATALOG.length} products written.`);
+          $status.innerHTML = `Seeding… <b>${written} / ${CATALOG.length}</b> products written.`;
+        }
+        await fsM.setDoc(fsM.doc(db, "meta", "bootstrap"), { seeded: true, at: fsM.serverTimestamp() });
+        log("meta/bootstrap written: { seeded: true }.");
+        $status.innerHTML = `<span class='ok'>✅ Done — ${written} of ${CATALOG.length} products seeded into Firestore.</span><br>` +
+          `Now restore the strict Firestore rules in the console and delete seed.html.`;
+        $btn.textContent = `Seeded ✓ (${written} products)`;
+        log(`FINAL COUNT: ${written} products, ${errors.length} errors.`, "ok");
+      } catch (e) {
+        errors.push(e);
+        log(`ERROR after ${written} products: ${e.code || ""} ${e.message || e}`, "err");
+        $status.innerHTML = `<span class='err'>Seeding stopped after ${written} of ${CATALOG.length} products.</span><br>` +
+          `${e.code || ""} ${e.message || e}<br>` +
+          (String(e.code || "").includes("permission-denied")
+            ? "Permission denied — the temporary seeding rules window is not open (or already closed). Products already written are kept; re-running is safe."
+            : "Products already written are kept; re-running is safe.");
+        $btn.disabled = false;
+        $btn.textContent = `Retry seeding (${CATALOG.length} products)`;
+      }
+    });
+
+    init();
+  </script>
+</body>
+</html>
