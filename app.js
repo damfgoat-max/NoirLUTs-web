@@ -355,29 +355,31 @@ function renderFeed() {
   if (count) count.textContent = products.length + " of " + shopState.products.length + " LUTs";
   if (!products.length) { feed.innerHTML = `<div class="empty"><span class="big">🔍</span>No LUTs match that search.</div>`; return; }
   feed.innerHTML = products.map(p => `
-    <a class="card" href="#/product/${p.id}">
-      <div class="card-media">${mediaHTML(p)}<span class="card-price-chip">${money(p.price)}</span>${p.type === "PACK" ? `<span class="card-pack-chip">PACK</span>` : ""}</div>
+    <article class="card">
+      <a class="card-media" href="#/product/${p.id}">${mediaHTML(p, "card-img")}${p.type === "PACK" ? `<span class="card-pack-chip">PACK</span>` : ""}</a>
       <div class="card-body">
-        <h2 class="card-name">${esc(p.name)}</h2>
+        <h3 class="card-name"><a href="#/product/${p.id}">${esc(p.name)}</a></h3>
         <p class="card-tag">${esc(p.tagline || "")}</p>
-        <span class="card-cta">VIEW ${p.type === "PACK" ? "PACK" : "LUT"} →</span>
+        <div class="card-foot">
+          <span class="card-price">${money(p.price)}</span>
+          <a class="btn-view" href="#/product/${p.id}">View</a>
+        </div>
       </div>
-    </a>`).join("");
+    </article>`).join("");
 }
 function viewShop() {
   setNav("shop");
   $view.innerHTML = `
     <section class="hero">
-      <h1>Cinematic color,<br><span class="accent">one tap away.</span></h1>
-      <p>${esc(CFG.brandTagline || "")}. Order in seconds — payment &amp; delivery are arranged personally with you in chat. No checkout, no hassle.</p>
+      <h1>Cinematic LUTs for <span class="accent">filmmakers &amp; creators</span></h1>
+      <p class="hero-sub">${esc(CFG.brandTagline || "")}. Order in seconds — payment &amp; delivery are arranged personally with you in chat. No checkout, no hassle.</p>
     </section>
-    <div class="section-title">LUT Packs &amp; LUTs</div>
     <div class="shop-tools">
       <input id="shopSearch" class="shop-search" type="search" placeholder="Search 187 LUTs &amp; packs…" value="${esc(shopState.q)}" autocomplete="off">
       <div class="chip-row">${SHOP_FILTERS.map(([k, lbl]) => `<button class="chip ${shopState.filter === k ? "chip-on" : ""}" data-filter="${k}">${lbl}</button>`).join("")}</div>
       <p class="feed-count" id="feedCount"></p>
     </div>
-    <div id="productFeed"><div class="loading">Loading LUTs…</div></div>`;
+    <div id="productFeed" class="product-grid"><div class="loading">Loading LUTs…</div></div>`;
   document.getElementById("shopSearch").addEventListener("input", (e) => { shopState.q = e.target.value; renderFeed(); });
   document.querySelectorAll("[data-filter]").forEach(b => b.addEventListener("click", () => {
     shopState.filter = b.dataset.filter;
@@ -396,22 +398,28 @@ async function viewProduct(id) {
   const st = p.settings || null;
   $view.innerHTML = `
     <a class="back-link" href="#/">← Back to shop</a>
+    <div class="detail-layout">
+    <div class="detail-col-media">
     <div class="detail-media">
       ${hasVideo
         ? `<video id="detailVideo" src="${esc(p.videoUrl)}" poster="${esc(p.imageUrl || "")}" autoplay muted loop playsinline></video><span class="unmute-hint" id="unmuteHint">🔇 Tap video for sound</span>`
         : mediaHTML(p)}
     </div>
+    ${paletteDotsHTML(p)}
+    </div>
+    <div class="detail-col-info">
     <h1 class="detail-name">${esc(p.name)}</h1>
     <p class="detail-price">${money(p.price)}</p>
     ${p.logWarning ? `<div class="log-warning">⚠ <b>For Log footage from supported cameras only</b> — this is a Log / conversion LUT, not for normal iPhone photos.</div>` : ""}
-    ${paletteDotsHTML(p)}
     <p class="detail-desc">${esc(p.description || p.tagline || "")}</p>
     ${st ? `<div class="settings-card"><h3>Best settings for this LUT</h3><div class="settings-grid">
       <span>ISO<b>${esc(st.iso)}</b></span><span>Shutter<b>${esc(st.shutter)}</b></span><span>White Balance<b>${esc(st.wb)}</b></span><span>EV<b>${esc(st.ev)}</b></span><span>Intensity<b>${esc(st.intensity)}</b></span><span>Best scene<b>${esc(st.scene)}</b></span>
     </div></div>` : ""}
     ${Array.isArray(p.includes) && p.includes.length ? `<div class="includes"><h3>What's included</h3><ul>${p.includes.map(i => `<li>${esc(i)}</li>`).join("")}</ul></div>` : ""}
     <button class="btn btn-accent" id="orderBtn">Place Order — ${money(p.price)}</button>
-    <p style="color:var(--muted);font-size:14px;text-align:center;margin-top:12px">No payment now. Placing an order opens a private chat with us to arrange payment &amp; delivery.</p>`;
+    <p class="order-note">No payment now. Placing an order opens a private chat with us to arrange payment &amp; delivery.</p>
+    </div>
+    </div>`;
   const vid = document.getElementById("detailVideo");
   if (vid) vid.addEventListener("click", () => { vid.muted = !vid.muted; const h = document.getElementById("unmuteHint"); if (h) h.textContent = vid.muted ? "🔇 Tap video for sound" : "🔊 Sound on — tap to mute"; });
   document.getElementById("orderBtn").addEventListener("click", () => confirmOrder(p));
@@ -461,7 +469,7 @@ function orderRowHTML(o, opts = {}) {
 
 function viewOrders() {
   setNav("orders");
-  $view.innerHTML = `<div class="hero"><h1>My <span class="accent">Orders</span></h1><p>Tap any order to open its chat.</p></div><div id="ordersList"><div class="loading">Loading your orders…</div></div>`;
+  $view.innerHTML = `<div class="page-head"><h1>My Orders</h1><p>Tap any order to open its chat.</p></div><div id="ordersList"><div class="loading">Loading your orders…</div></div>`;
   let chatMap = {};
   unsubs.push(Store.subscribeMyOrders((orders) => {
     const el = document.getElementById("ordersList"); if (!el) return;
@@ -478,7 +486,7 @@ function viewOrders() {
 
 function chatView(orderId, asAdmin) {
   setNav(asAdmin ? "admin" : "orders");
-  $view.innerHTML = `<a class="back-link" href="#${asAdmin ? "/admin" : "/orders"}">← Back</a><div id="chatRoot"><div class="loading">Opening chat…</div></div>`;
+  $view.innerHTML = `<div class="content-narrow"><a class="back-link" href="#${asAdmin ? "/admin" : "/orders"}">← Back</a><div id="chatRoot"><div class="loading">Opening chat…</div></div></div>`;
   let order = null, rendered = false;
   const role = asAdmin ? "admin" : "customer";
 
@@ -561,7 +569,7 @@ function viewAdmin() {
   setNav("admin");
   if (!Store.isAdmin) { location.hash = "#/admin/login"; return; }
   $view.innerHTML = `
-    <div class="hero"><h1>Admin <span class="accent">Dashboard</span></h1><p>Every order chat, newest first.</p></div>
+    <div class="page-head"><h1>Admin Dashboard</h1><p>Every order chat, newest first.</p></div>
     <div class="stats" id="stats">
       <div class="stat"><div class="num" id="stTotal">–</div><div class="lbl">Total Orders</div></div>
       <div class="stat"><div class="num" id="stPending" style="color:var(--yellow)">–</div><div class="lbl">Pending</div></div>

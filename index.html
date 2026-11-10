@@ -12,27 +12,27 @@
   <div id="demoBadge" class="demo-badge hidden">DEMO MODE — connect Firebase to go live</div>
 
   <header class="site-header">
-    <a class="brand" href="#/">
-      <span id="brandName">NOIR</span><span class="brand-accent"> LUTs</span>
-    </a>
-    <nav class="top-nav">
-      <a href="#/" data-nav="shop">Shop</a>
-      <a href="#/orders" data-nav="orders">My Orders</a>
-      <a href="#/admin" data-nav="admin" class="hidden" id="adminNavLink">Admin</a>
-    </nav>
+    <div class="header-inner">
+      <a class="brand" href="#/">
+        <span id="brandName">NOIR</span><span class="brand-accent"> LUTs</span>
+      </a>
+      <nav class="top-nav">
+        <a href="#/" data-nav="shop">Shop</a>
+        <a href="#/orders" data-nav="orders">My Orders</a>
+        <a href="#/admin" data-nav="admin" class="hidden" id="adminNavLink">Admin</a>
+      </nav>
+    </div>
   </header>
 
   <main id="view" class="view"></main>
 
   <footer class="site-footer">
-    <button id="copyrightBtn" class="copyright-btn" aria-label="Copyright">© 2025 <span id="brandNameFooter">NOIR</span></button>
-    <p class="footer-note">Payment &amp; delivery arranged personally in chat after you order.</p>
+    <div class="footer-inner">
+      <div class="footer-brand"><span>NOIR</span><span class="brand-accent"> LUTs</span></div>
+      <p class="footer-note">Payment &amp; delivery arranged personally in chat after you order.</p>
+      <button id="copyrightBtn" class="copyright-btn" aria-label="Copyright">© 2025 <span id="brandNameFooter">NOIR</span></button>
+    </div>
   </footer>
-
-  <nav class="bottom-nav">
-    <a href="#/" data-nav="shop"><span class="bn-icon">🎬</span>Shop</a>
-    <a href="#/orders" data-nav="orders"><span class="bn-icon">📦</span>Orders</a>
-  </nav>
 
   <div id="modalRoot"></div>
   <div id="toast" class="toast hidden"></div>
