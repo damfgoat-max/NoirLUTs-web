@@ -30,3 +30,4 @@ instantly opens a private chat with the store admin to arrange payment
 ## Deploy
 Static site — deploy the folder to Vercel as-is (no build command,
 no output dir config needed).
+
