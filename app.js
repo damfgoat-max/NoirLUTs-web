@@ -321,7 +321,7 @@ const Store = {
 };
 function normTs(d) { const o = { ...d }; for (const k of ["createdAt", "lastMessageAt"]) if (o[k] && o[k].toMillis) o[k] = o[k].toMillis(); return o; }
 if (!LIVE && sessionStorage.getItem("noirluts_demo_admin") === "1") Store.isAdmin = true;
-function updateAdminNav() { document.getElementById("adminNavLink").classList.toggle("hidden", !Store.isAdmin); }
+function updateAdminNav() { const l = document.getElementById("adminNavLink"); if (l) l.textContent = Store.isAdmin ? "Admin" : "Admin Login"; }
 
 // ============================================================
 //  ROUTER + VIEWS
@@ -417,7 +417,7 @@ async function viewProduct(id) {
     </div></div>` : ""}
     ${Array.isArray(p.includes) && p.includes.length ? `<div class="includes"><h3>What's included</h3><ul>${p.includes.map(i => `<li>${esc(i)}</li>`).join("")}</ul></div>` : ""}
     <button class="btn btn-accent" id="orderBtn">Place Order — ${money(p.price)}</button>
-    <p class="order-note">No payment now — we accept Bitcoin and Apple Cash. Placing an order opens a private chat with us to arrange payment &amp; delivery.</p>
+    <p class="order-note">No payment now — we accept Bitcoin and Apple Cash (send Apple Cash to 619-917-6403). Placing an order opens a private chat with us to arrange payment &amp; delivery.</p>
     </div>
     </div>`;
   const vid = document.getElementById("detailVideo");
@@ -430,7 +430,7 @@ function confirmOrder(p) {
     <div class="modal-backdrop" id="mb">
       <div class="modal">
         <h3>Confirm your order</h3>
-        <p>This places your order and opens a chat with us — we'll arrange payment (Bitcoin or Apple Cash) &amp; delivery there. Nothing is charged now.</p>
+        <p>This places your order and opens a chat with us — we'll arrange payment (Bitcoin or Apple Cash to 619-917-6403) &amp; delivery there. Nothing is charged now.</p>
         <div class="row"><span>LUT pack</span><b>${esc(p.name)}</b></div>
         <div class="row"><span>Price</span><b>${money(p.price)}</b></div>
         <div class="row"><span>Status</span><b>Pending</b></div>
