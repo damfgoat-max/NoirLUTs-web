@@ -39,7 +39,7 @@ function paletteDotsHTML(p) {
 }
 function mediaHTML(p, cls) {
   if (p.videoUrl) return `<video class="${cls}" src="${esc(p.videoUrl)}" poster="${esc(p.imageUrl || "")}" autoplay muted loop playsinline></video>`;
-  if (p.imageUrl) return `<img class="${cls}" src="${esc(p.imageUrl)}" alt="${esc(p.name)}" loading="lazy">`;
+  if (p.imageUrl) return `<img class="${cls}" src="${esc(p.imageUrl)}" alt="${esc(p.name)}" loading="lazy" data-pid="${esc(p.id || "")}">`;
   return `<div class="${cls} palette-preview" style="${paletteStyle(p)}"><span class="palette-name">${esc(p.name)}</span><span class="palette-grad"></span></div>`;
 }
 
@@ -53,11 +53,23 @@ function mediaHTML(p, cls) {
 // ============================================================
 const CATALOG = (window.NOIR_CATALOG || []).map(p => ({ ...p }));
 
+// Preview images: if one fails to load, fall back to the palette gradient.
+document.addEventListener("error", (e) => {
+  const t = e.target;
+  if (!t || t.tagName !== "IMG" || !t.dataset || !t.dataset.pid) return;
+  const prod = CATALOG.find(x => x.id === t.dataset.pid);
+  const div = document.createElement("div");
+  div.className = (t.className || "") + " palette-preview";
+  div.setAttribute("style", prod ? paletteStyle(prod) : "background:#1a1a1a");
+  div.innerHTML = `<span class="palette-name">${esc(prod ? prod.name : (t.alt || ""))}</span><span class="palette-grad"></span>`;
+  t.replaceWith(div);
+}, true);
+
 // ============================================================
 //  DEMO DATA LAYER (localStorage)
 // ============================================================
 const DemoDB = {
-  KEY: "noirluts_demo_db_v3",
+  KEY: "noirluts_demo_db_v4",
   listeners: new Set(),
   load() {
     try { const raw = localStorage.getItem(this.KEY); if (raw) return JSON.parse(raw); } catch (e) {}
