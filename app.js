@@ -57,7 +57,7 @@ const CATALOG = (window.NOIR_CATALOG || []).map(p => ({ ...p }));
 //  DEMO DATA LAYER (localStorage)
 // ============================================================
 const DemoDB = {
-  KEY: "noirluts_demo_db_v2",
+  KEY: "noirluts_demo_db_v3",
   listeners: new Set(),
   load() {
     try { const raw = localStorage.getItem(this.KEY); if (raw) return JSON.parse(raw); } catch (e) {}
