@@ -141,8 +141,8 @@ const Store = {
       run(); return DemoDB.onChange(run);
     }
     const { fsM, db } = this._fb;
-    const q = fsM.query(fsM.collection(db, "products"), fsM.where("isActive", "==", true), fsM.orderBy("sortOrder"));
-    return fsM.onSnapshot(q, (s) => cb(s.docs.map((d) => ({ id: d.id, ...d.data() }))), () => cb([]));
+    const q = fsM.query(fsM.collection(db, "products"), fsM.orderBy("sortOrder"));
+    return fsM.onSnapshot(q, (s) => cb(s.docs.map((d) => ({ id: d.id, ...d.data() })).filter(p => p.isActive !== false)), (e) => { console.error("products listener", e); cb([]); });
   },
 
   subscribeMyOrders(cb) {
@@ -151,8 +151,8 @@ const Store = {
       run(); return DemoDB.onChange(run);
     }
     const { fsM, db } = this._fb;
-    const q = fsM.query(fsM.collection(db, "orders"), fsM.where("customerId", "==", this.uid), fsM.orderBy("createdAt", "desc"));
-    return fsM.onSnapshot(q, (s) => cb(s.docs.map((d) => ({ id: d.id, ...normTs(d.data()) }))), () => cb([]));
+    const q = fsM.query(fsM.collection(db, "orders"), fsM.where("customerId", "==", this.uid));
+    return fsM.onSnapshot(q, (s) => cb(s.docs.map((d) => ({ id: d.id, ...normTs(d.data()) })).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))), (e) => { console.error("orders listener", e); cb([]); });
   },
 
   subscribeAllChats(cb) { // admin
