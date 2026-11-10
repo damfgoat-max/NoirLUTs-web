@@ -59,7 +59,7 @@ Easiest (console) way:
    best-settings, colour palettes sampled from the actual .cube data,
    and types). It uses each product's id as the Firestore document id,
    so re-running it updates in place — it never duplicates products.
-   Product prices are starter placeholders (individual LUTs $12,
+   Product prices are starter placeholders (individual LUTs $6,
    packs $79 / $49 / $39) — edit any of them in Firestore afterwards.
    Note: the .cube files themselves are NOT hosted on the website —
    delivery stays manual: you send the file in the customer's order
