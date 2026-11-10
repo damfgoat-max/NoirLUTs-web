@@ -372,7 +372,7 @@ function viewShop() {
   $view.innerHTML = `
     <section class="hero">
       <h1>Cinematic LUTs for <span class="accent">filmmakers &amp; creators</span></h1>
-      <p class="hero-sub">${esc(CFG.brandTagline || "")}. Order in seconds — payment &amp; delivery are arranged personally with you in chat. No checkout, no hassle.</p>
+      <p class="hero-sub">${esc(CFG.brandTagline || "")}. Order in seconds — we accept Bitcoin and Apple Cash, arranged personally with you in chat. No checkout, no hassle.</p>
     </section>
     <div class="shop-tools">
       <input id="shopSearch" class="shop-search" type="search" placeholder="Search 187 LUTs &amp; packs…" value="${esc(shopState.q)}" autocomplete="off">
@@ -417,7 +417,7 @@ async function viewProduct(id) {
     </div></div>` : ""}
     ${Array.isArray(p.includes) && p.includes.length ? `<div class="includes"><h3>What's included</h3><ul>${p.includes.map(i => `<li>${esc(i)}</li>`).join("")}</ul></div>` : ""}
     <button class="btn btn-accent" id="orderBtn">Place Order — ${money(p.price)}</button>
-    <p class="order-note">No payment now. Placing an order opens a private chat with us to arrange payment &amp; delivery.</p>
+    <p class="order-note">No payment now — we accept Bitcoin and Apple Cash. Placing an order opens a private chat with us to arrange payment &amp; delivery.</p>
     </div>
     </div>`;
   const vid = document.getElementById("detailVideo");
@@ -430,7 +430,7 @@ function confirmOrder(p) {
     <div class="modal-backdrop" id="mb">
       <div class="modal">
         <h3>Confirm your order</h3>
-        <p>This places your order and opens a chat with us — we'll arrange payment &amp; delivery there. Nothing is charged now.</p>
+        <p>This places your order and opens a chat with us — we'll arrange payment (Bitcoin or Apple Cash) &amp; delivery there. Nothing is charged now.</p>
         <div class="row"><span>LUT pack</span><b>${esc(p.name)}</b></div>
         <div class="row"><span>Price</span><b>${money(p.price)}</b></div>
         <div class="row"><span>Status</span><b>Pending</b></div>
